@@ -1,27 +1,27 @@
 <template>
-<div class="chat-header">
-<h2>Zoro</h2>
-</div>
-<div class="chat-container">
-  <div class="chat-messages-container">
-    <div class="chat-messages">
-      <div
-        v-for="message in messages"
-        :key="message.id"
-        :class="['chat-message', message.sender === 'user' ? 'user' : 'bot']"
-      >
-        <div class="message-header">{{ message.sender }}</div>
-        <div class="message-content">{{ message.text }}</div>
+  <div class="chat-header">
+    <h2>Zoro</h2>
+  </div>
+  <div class="chat-container">
+    <div class="chat-messages-container">
+      <div class="chat-messages">
+        <div
+          v-for="message in messages"
+          :key="message.id"
+          :class="['chat-message', message.sender === 'user' ? 'user' : 'bot']"
+        >
+          <div class="message-header">{{ message.sender }}</div>
+          <div class="message-content">{{ message.text }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="chat-input-container">
+      <div class="chat-input">
+        <InputText v-model="userInput" placeholder="Type your message..." @keydown.enter="sendMessage" />
+        <Button label="Send" @click="sendMessage" />
       </div>
     </div>
   </div>
-  <div class="chat-input-container">
-    <div class="chat-input">
-      <InputText v-model="userInput" placeholder="Type your message..." @keydown.enter="sendMessage" />
-      <Button label="Send" @click="sendMessage" />
-    </div>
-  </div>
-</div>
 </template>
 
 <script setup>
@@ -32,44 +32,51 @@ const userInput = ref('');
 const messages = ref([]);
 
 const requestOptions = {
-method: 'POST',
-url: 'https://chatgpt-best-price.p.rapidapi.com/v1/chat/completions',
-headers: {
-  'content-type': 'application/json',
-  'X-RapidAPI-Key': '0ec1070450msh892c0b7816b8799p13cc9djsn9f281cd84cef',
-  'X-RapidAPI-Host': 'chatgpt-best-price.p.rapidapi.com'
-},
-data: {
-  model: 'gpt-3.5-turbo',
-  messages: []
-}
+  method: 'POST',
+  url: 'https://chatgpt-best-price.p.rapidapi.com/v1/chat/completions',
+  headers: {
+    'content-type': 'application/json',
+    'X-RapidAPI-Key': '0ec1070450msh892c0b7816b8799p13cc9djsn9f281cd84cef',
+    'X-RapidAPI-Host': 'chatgpt-best-price.p.rapidapi.com'
+  },
+  data: {
+    model: 'gpt-3.5-turbo',
+    messages: []
+  }
 };
 
 const sendMessage = async () => {
-try {
-  if (userInput.value.trim() !== '') {
-    const newMessage = {
-      id: messages.value.length + 1,
-      text: userInput.value,
-      sender: 'user'
-    };
-    messages.value.push(newMessage);
-    userInput.value = '';
+  try {
+    if (userInput.value.trim() !== '') {
+      const newMessage = {
+        id: messages.value.length + 1,
+        text: userInput.value,
+        sender: 'user'
+      };
+      messages.value.push(newMessage);
+      userInput.value = '';
 
-    // Update messages in the requestOptions data object
-    requestOptions.data.messages = [{ role: 'user', content: newMessage.text }];
-    const response = await axios.request(requestOptions);
-    const assistantMessage = response.data.choices[0].message.content;
-    const botMessage = {
+      // Update messages in the requestOptions data object
+      requestOptions.data.messages = [{ role: 'user', content: newMessage.text }];
+      const response = await axios.request(requestOptions);
+      const assistantMessage = response.data.choices[0].message.content;
+      const botMessage = {
+        id: messages.value.length + 1,
+        text: assistantMessage,
+        sender: 'bot'
+      };
+      messages.value.push(botMessage);
+    }
+  } catch (error) {
+    console.error(error);
+    // Display error message
+    const errorMessage = {
       id: messages.value.length + 1,
-      text: assistantMessage,
+      text: 'Try again Later',
       sender: 'bot'
     };
-    messages.value.push(botMessage);
+    messages.value.push(errorMessage);
   }
-} catch (error) {
-  console.error(error);
-}
 };
 </script>
 
@@ -79,10 +86,11 @@ display: flex;
 flex-direction: column;
 height: 100vh;
 background-color: #f0f0f0;
+padding: 10px 0;
 }
 
 .chat-header {
-  background-image: url('https://giffiles.alphacoders.com/221/221829.gif');
+  background-image: url('./zoro.gif');
   background-size: cover;
   background-position: center;
   color: #FFFFFF; /* White */
