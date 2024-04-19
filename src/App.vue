@@ -55,7 +55,7 @@ const sendMessage = async () => {
 
       // Update messages in the requestOptions data object
       requestOptions.messages = [
-        { role: 'system', content: 'You are a helpful assistant.' },
+        { role: 'system', content: 'You are a helpful assistant with name Zoro.' },
         { role: 'user', content: newMessage.text }
       ];
 
