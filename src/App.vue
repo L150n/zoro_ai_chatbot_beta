@@ -4,7 +4,7 @@
   </div>
   <div class="chat-container">
     <div class="chat-messages-container">
-      <div class="chat-messages">
+      <div class="chat-messages" :style="{ padding: '8px 0' }"> <!-- Added small top and bottom padding -->
         <div
           v-for="message in messages"
           :key="message.id"
@@ -69,13 +69,11 @@ const sendMessage = async () => {
     }
   } catch (error) {
     console.error(error);
-    // Display error message
-    const errorMessage = {
+    messages.value.push({ // Display error message
       id: messages.value.length + 1,
       text: 'Try again Later',
       sender: 'bot'
-    };
-    messages.value.push(errorMessage);
+    });
   }
 };
 </script>
@@ -86,7 +84,6 @@ display: flex;
 flex-direction: column;
 height: 100vh;
 background-color: #f0f0f0;
-padding: 10px 0;
 }
 
 .chat-header {
@@ -105,7 +102,7 @@ padding: 10px 0;
 .chat-messages-container {
 flex-grow: 1;
 overflow-y: auto;
-padding: 16px;
+padding: 8px 16px;
 }
 
 .chat-messages {
