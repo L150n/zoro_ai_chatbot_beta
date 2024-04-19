@@ -26,5 +26,5 @@ export default defineConfig({
       ]
     }
   })
-]
+],base: '/zoro_ai_chatbot_beta/'
 })
