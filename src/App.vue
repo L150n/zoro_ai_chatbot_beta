@@ -87,7 +87,7 @@ background-color: #f0f0f0;
 }
 
 .chat-header {
-  background-image: url('./zoro.gif');
+  background-image: url('https://giffiles.alphacoders.com/221/221829.gif');
   background-size: cover;
   background-position: center;
   color: #FFFFFF; /* White */
