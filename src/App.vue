@@ -26,23 +26,20 @@
 
 <script setup>
 import { ref } from 'vue';
-import axios from 'axios';
+import OpenAI from 'openai';
 
 const userInput = ref('');
 const messages = ref([]);
 
+const anyscale = new OpenAI({
+  baseURL: 'https://api.endpoints.anyscale.com/v1',
+  apiKey: 'esecret_zbhlwl6qyh716ywxl8x3y5szgb',
+  dangerouslyAllowBrowser: true
+});
+
 const requestOptions = {
-  method: 'POST',
-  url: 'https://chatgpt-best-price.p.rapidapi.com/v1/chat/completions',
-  headers: {
-    'content-type': 'application/json',
-    'X-RapidAPI-Key': '0ec1070450msh892c0b7816b8799p13cc9djsn9f281cd84cef',
-    'X-RapidAPI-Host': 'chatgpt-best-price.p.rapidapi.com'
-  },
-  data: {
-    model: 'gpt-3.5-turbo',
-    messages: []
-  }
+  model: 'mistralai/Mistral-7B-Instruct-v0.1',
+  messages: []
 };
 
 const sendMessage = async () => {
@@ -57,9 +54,13 @@ const sendMessage = async () => {
       userInput.value = '';
 
       // Update messages in the requestOptions data object
-      requestOptions.data.messages = [{ role: 'user', content: newMessage.text }];
-      const response = await axios.request(requestOptions);
-      const assistantMessage = response.data.choices[0].message.content;
+      requestOptions.messages = [
+        { role: 'system', content: 'You are a helpful assistant.' },
+        { role: 'user', content: newMessage.text }
+      ];
+
+      const completion = await anyscale.chat.completions.create(requestOptions);
+      const assistantMessage = completion.choices[0]?.message?.content;
       const botMessage = {
         id: messages.value.length + 1,
         text: assistantMessage,
@@ -77,6 +78,7 @@ const sendMessage = async () => {
   }
 };
 </script>
+
 
 <style scoped>
 .chat-container {
