@@ -1,5 +1,17 @@
-# Vue 3 + Vite
+# Zoro AI Chat Bot
 
-This template should help get you started developing with Vue 3 in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+Zoro is an AI chat bot developed using Vue.js. It is accessible as a Progressive Web App (PWA) and can be viewed online [here](https://l150n.github.io/zoro_ai_chatbot_beta/).
 
-Learn more about IDE Support for Vue in the [Vue Docs Scaling up Guide](https://vuejs.org/guide/scaling-up/tooling.html#ide-support).
+## Features
+
+- **AI-Powered Conversations**: Engage in conversations with Zoro, powered by AI algorithms.
+- **Progressive Web App (PWA)**: Enjoy the convenience of accessing Zoro as a PWA, enabling offline usage and fast loading times.
+- **User-Friendly Interface**: Zoro provides a sleek and intuitive interface for seamless interaction.
+
+## Usage
+
+Simply access the Zoro AI chat bot through the provided link and start conversing! You can chat with Zoro on any device with internet access, and the PWA functionality ensures smooth performance.
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
