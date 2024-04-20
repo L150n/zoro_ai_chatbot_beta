@@ -28,13 +28,12 @@
 import { ref } from 'vue';
 import OpenAI from 'openai';
 
-const apiKey = import.meta.env.VITE_API_KEY;
 const userInput = ref('');
 const messages = ref([]);
 
 const anyscale = new OpenAI({
   baseURL: 'https://api.endpoints.anyscale.com/v1',
-  apiKey: apiKey,
+  apiKey: 'esecret_zbhlwl6qyh716ywxl8x3y5szgb',
   dangerouslyAllowBrowser: true
 });
 
