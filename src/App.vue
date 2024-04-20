@@ -28,7 +28,7 @@
 import { ref } from 'vue';
 import OpenAI from 'openai';
 
-const apiKey = process.env.VUE_APP_API_KEY;
+const apiKey = import.meta.env.VITE_API_KEY;
 const userInput = ref('');
 const messages = ref([]);
 
