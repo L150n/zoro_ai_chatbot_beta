@@ -42,12 +42,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Set API Key
-        env:
-          VUE_APP_API_KEY: ${{ secrets.API_KEY }}
-        run: |
-          echo "VUE_APP_API_KEY=$VUE_APP_API_KEY" >> $GITHUB_ENV
-
       - name: Build
         run: npm run build
 
