@@ -1,32 +1,34 @@
 <template>
   <div class="chat-header">
     <h2>Zoro</h2>
+    <i class="pi pi-refresh new-chat-icon" @click="startNewChat"></i>
   </div>
   <div class="chat-container">
     <div class="chat-messages-container">
-      <div class="chat-messages" :style="{ padding: '8px 0' }"> <!-- Added small top and bottom padding -->
+      <div class="chat-messages" :style="{ padding: '8px 0' }">
         <div
           v-for="message in messages"
           :key="message.id"
           :class="['chat-message', message.sender === 'user' ? 'user' : 'bot']"
         >
           <div class="message-header">{{ message.sender }}</div>
-          <div class="message-content">{{ message.text }}</div>
+          <div class="message-content" v-html="message.text"></div>
         </div>
       </div>
     </div>
     <div class="chat-input-container">
       <div class="chat-input">
         <InputText v-model="userInput" placeholder="Type your message..." @keydown.enter="sendMessage" />
-        <Button label="Send" @click="sendMessage" />
+        <Button :disabled="!userInput.trim()" label="Send" @click="sendMessage" />
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, nextTick, onMounted, watch } from 'vue';
 import OpenAI from 'openai';
+import 'primeicons/primeicons.css'; // PrimeIcons CSS
 
 const userInput = ref('');
 const messages = ref([]);
@@ -37,9 +39,11 @@ const anyscale = new OpenAI({
   dangerouslyAllowBrowser: true
 });
 
-const requestOptions = {
-  model: 'mistralai/Mistral-7B-Instruct-v0.1',
-  messages: []
+const systemMessage = { role: 'assistant', content: 'You are a helpful assistant with name Zoro.' };
+
+const scrollToBottom = () => {
+  const container = document.querySelector('.chat-messages-container');
+  container.scrollTop = container.scrollHeight;
 };
 
 const sendMessage = async () => {
@@ -53,148 +57,186 @@ const sendMessage = async () => {
       messages.value.push(newMessage);
       userInput.value = '';
 
-      // Update messages in the requestOptions data object
-      requestOptions.messages = [
-        { role: 'system', content: 'You are a helpful assistant with name Zoro.' },
-        { role: 'user', content: newMessage.text }
-      ];
+      await nextTick();
+      scrollToBottom();
+
+      const requestOptions = {
+        model: 'meta-llama/Meta-Llama-3-70B-Instruct',
+        messages: [
+          systemMessage,
+          ...messages.value.map(msg => ({ role: msg.sender === 'user' ? 'user' : 'assistant', content: msg.text }))
+        ],
+        temperature: 1,
+        max_tokens: 500,
+        top_p: 1,
+        frequency_penalty: 0
+      };
 
       const completion = await anyscale.chat.completions.create(requestOptions);
-      const assistantMessage = completion.choices[0]?.message?.content;
+      const assistantMessage = completion.choices[0]?.message?.content.replace(/\n/g, '<br/>').replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
       const botMessage = {
         id: messages.value.length + 1,
         text: assistantMessage,
         sender: 'bot'
       };
       messages.value.push(botMessage);
+
+      await nextTick();
+      scrollToBottom();
     }
   } catch (error) {
     console.error(error);
-    messages.value.push({ // Display error message
+    messages.value.push({
       id: messages.value.length + 1,
-      text: 'Try again Later',
+      text: 'Try again later',
       sender: 'bot'
     });
+
+    await nextTick();
+    scrollToBottom();
   }
 };
-</script>
 
+const startNewChat = () => {
+  messages.value = [];
+  localStorage.removeItem('chatMessages');
+};
+
+onMounted(() => {
+  const savedMessages = localStorage.getItem('chatMessages');
+  if (savedMessages) {
+    messages.value = JSON.parse(savedMessages);
+  }
+});
+
+watch(messages, (newMessages) => {
+  localStorage.setItem('chatMessages', JSON.stringify(newMessages));
+});
+</script>
 
 <style scoped>
 .chat-container {
-display: flex;
-flex-direction: column;
-height: 100vh;
-background-color: #f0f0f0;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: #f0f0f0;
 }
 
 .chat-header {
   background-image: url('https://giffiles.alphacoders.com/221/221829.gif');
   background-size: cover;
   background-position: center;
-  color: #FFFFFF; /* White */
+  color: #FFFFFF;
   padding: 16px;
   text-align: center;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5); /* Adding a shadow effect */
-  font-size: 24px; /* Increasing font size */
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+  font-size: 24px;
+  position: relative;
 }
 
-
+.new-chat-icon {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  font-size: 24px;
+  cursor: pointer;
+}
 
 .chat-messages-container {
-flex-grow: 1;
-overflow-y: auto;
-padding: 8px 16px;
+  flex-grow: 1;
+  overflow-y: auto;
+  padding: 8px 16px;
 }
 
 .chat-messages {
-display: flex;
-flex-direction: column;
-align-items: flex-start;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
 }
 
 .chat-message {
-margin-bottom: 12px;
-padding: 8px 12px;
-border-radius: 16px;
-max-width: 70%;
-display: flex;
-flex-direction: column;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  border-radius: 16px;
+  max-width: 70%;
+  display: flex;
+  flex-direction: column;
 }
 
 .chat-message .message-header {
-font-weight: bold;
-margin-bottom: 4px;
+  font-weight: bold;
+  margin-bottom: 4px;
 }
 
 .chat-message .message-content {
-word-break: break-word;
+  word-break: break-word;
 }
 
 .chat-message.user {
-background-color: #059669;
-color: #fff;
-align-self: flex-end;
+  background-color: #059669;
+  color: #fff;
+  align-self: flex-end;
 }
 
 .chat-message.bot {
-background-color: #fff;
-color: #333;
-align-self: flex-start;
+  background-color: #fff;
+  color: #333;
+  align-self: flex-start;
 }
 
 .chat-input-container {
-background-color: #fff;
-border-top: 1px solid #ddd;
-padding: 16px;
+  background-color: #fff;
+  border-top: 1px solid #ddd;
+  padding: 16px;
 }
 
 .chat-input {
-display: flex;
-align-items: center;
+  display: flex;
+  align-items: center;
 }
 
 .chat-input input {
-flex-grow: 1;
-margin-right: 12px;
+  flex-grow: 1;
+  margin-right: 12px;
 }
 
 .chat-input button {
-min-width: 80px;
+  min-width: 80px;
+}
+
+.chat-input input:focus {
+  border-color: #059669;
+  outline: none;
+}
+
+.chat-input button:hover {
+  background-color: #047857;
+  color: #fff;
 }
 
 @media (max-width: 768px) {
-.chat-container {
-  height: auto;
-  display: grid;
-  grid-template-rows: 1fr auto;
-}
+  .chat-container {
+    height: auto;
+    display: grid;
+    grid-template-rows: 1fr auto;
+  }
 
-.chat-messages-container {
-  overflow-y: auto;
-  max-height: 70vh;
-}
+  .chat-messages-container {
+    overflow-y: auto;
+    max-height: 70vh;
+  }
 
-.chat-input-container {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 12px;
-}
+  .chat-input-container {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 12px;
+  }
 
-.chat-input {
-  flex-direction: column;
-  align-items: stretch;
-}
-
-.chat-input input {
-  margin-right: 0;
-  margin-bottom: 12px;
-}
-
-.chat-input button {
-  width: 100%;
-}
+  .chat-input {
+    flex-direction: column;
+    align-items: stretch;
+  }
 }
 </style>
