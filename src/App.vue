@@ -14,6 +14,11 @@
           <div class="message-header">{{ message.sender }}</div>
           <div class="message-content" v-html="message.text"></div>
         </div>
+        <div v-if="loading" class="chat-message bot">
+          <div class="message-header">bot</div>
+          <Skeleton width="60%" height="20px" />
+          <Skeleton width="80%" height="20px" style="margin-top: 10px;" />
+        </div>
       </div>
     </div>
     <div class="chat-input-container">
@@ -25,6 +30,7 @@
   </div>
 </template>
 
+
 <script setup>
 import { ref, nextTick, onMounted, watch } from 'vue';
 import OpenAI from 'openai';
@@ -32,6 +38,7 @@ import 'primeicons/primeicons.css'; // PrimeIcons CSS
 
 const userInput = ref('');
 const messages = ref([]);
+const loading = ref(false);
 
 const anyscale = new OpenAI({
   baseURL: 'https://api.endpoints.anyscale.com/v1',
@@ -60,6 +67,8 @@ const sendMessage = async () => {
       await nextTick();
       scrollToBottom();
 
+      loading.value = true;
+
       const requestOptions = {
         model: 'meta-llama/Meta-Llama-3-70B-Instruct',
         messages: [
@@ -81,6 +90,8 @@ const sendMessage = async () => {
       };
       messages.value.push(botMessage);
 
+      loading.value = false;
+
       await nextTick();
       scrollToBottom();
     }
@@ -91,6 +102,8 @@ const sendMessage = async () => {
       text: 'Try again later',
       sender: 'bot'
     });
+
+    loading.value = false;
 
     await nextTick();
     scrollToBottom();
