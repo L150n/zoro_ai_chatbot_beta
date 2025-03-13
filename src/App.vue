@@ -1,10 +1,17 @@
 <template>
-  <div class="chat-header">
+  <div class="chat-header" :class="{ 'dark': theme === 'dark' }">
     <h2>Zoro</h2>
-    <i class="pi pi-refresh new-chat-icon" @click="startNewChat"></i>
+    <div class="header-buttons">
+  <Button 
+    :icon="theme === 'light' ? 'pi pi-moon' : 'pi pi-sun'" 
+    @click="toggleTheme" 
+    aria-label="Toggle theme" 
+  />
+  <Button label="New Chat"  icon="pi pi-plus" @click="startNewChat" class="p-button" />
+</div>
   </div>
-  <div class="chat-container">
-    <div class="chat-messages-container">
+  <div class="chat-container" :class="{ 'dark': theme === 'dark' }">
+    <div class="chat-messages-container" role="log" aria-live="polite">
       <div class="chat-messages" :style="{ padding: '8px 0' }">
         <div
           v-for="message in messages"
@@ -13,146 +20,189 @@
         >
           <div class="message-header">{{ message.sender }}</div>
           <div class="message-content" v-html="message.text"></div>
+          <div class="message-timestamp">{{ formatTimestamp(message.timestamp) }}</div>
         </div>
         <div v-if="loading" class="chat-message bot">
           <div class="message-header">bot</div>
-          <Skeleton width="60%" height="20px" />
-          <Skeleton width="80%" height="20px" style="margin-top: 10px;" />
+          <ProgressSpinner style="width: 50px; height: 50px" strokeWidth="8" fill="transparent"
+            animationDuration=".5s" aria-label="Custom ProgressSpinner" />
         </div>
       </div>
     </div>
     <div class="chat-input-container">
       <div class="chat-input">
-        <InputText v-model="userInput" placeholder="Type your message..." @keydown.enter="sendMessage" />
-        <Button :disabled="!userInput.trim()" label="Send" @click="sendMessage" />
+        <InputText v-model="userInput" placeholder="Type your message..." @keydown.enter="sendMessage" aria-label="Message input" class="p-inputtext" />
+        <Button :disabled="!userInput.trim()" label="Send" @click="sendMessage" class="p-button" />
       </div>
     </div>
   </div>
 </template>
 
-
 <script setup>
 import { ref, nextTick, onMounted, watch } from 'vue';
 import OpenAI from 'openai';
-import 'primeicons/primeicons.css'; // PrimeIcons CSS
+import 'primeicons/primeicons.css';
 
 const userInput = ref('');
 const messages = ref([]);
 const loading = ref(false);
+const theme = ref('dark');
 
 const anyscale = new OpenAI({
-  baseURL: 'https://api.endpoints.anyscale.com/v1',
-  apiKey: 'esecret_zbhlwl6qyh716ywxl8x3y5szgb',
+  baseURL: 'https://openrouter.ai/api/v1',
+  apiKey: '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',
   dangerouslyAllowBrowser: true
 });
 
 const systemMessage = { role: 'assistant', content: 'You are a helpful assistant with name Zoro.' };
+
+const toggleTheme = () => {
+  theme.value = theme.value === 'light' ? 'dark' : 'light';
+  localStorage.setItem('theme', theme.value);
+};
 
 const scrollToBottom = () => {
   const container = document.querySelector('.chat-messages-container');
   container.scrollTop = container.scrollHeight;
 };
 
-const sendMessage = async () => {
+const addUserMessage = () => {
+  if (userInput.value.trim() !== '') {
+    const newMessage = {
+      id: Date.now(),
+      text: userInput.value,
+      sender: 'user',
+      timestamp: new Date()
+    };
+    messages.value.push(newMessage);
+    userInput.value = '';
+    nextTick(scrollToBottom);
+  }
+};
+
+const fetchBotResponse = async () => {
+  loading.value = true;
   try {
-    if (userInput.value.trim() !== '') {
-      const newMessage = {
-        id: messages.value.length + 1,
-        text: userInput.value,
-        sender: 'user'
-      };
-      messages.value.push(newMessage);
-      userInput.value = '';
+    const requestOptions = {
+      model: 'deepseek/deepseek-r1:free',
+      messages: [
+        systemMessage,
+        ...messages.value.map(msg => ({ role: msg.sender === 'user' ? 'user' : 'assistant', content: msg.text }))
+      ],
+      temperature: 1,
+      max_tokens: 500,
+      top_p: 1,
+      frequency_penalty: 0
+    };
 
-      await nextTick();
-      scrollToBottom();
-
-      loading.value = true;
-
-      const requestOptions = {
-        model: 'meta-llama/Meta-Llama-3-70B-Instruct',
-        messages: [
-          systemMessage,
-          ...messages.value.map(msg => ({ role: msg.sender === 'user' ? 'user' : 'assistant', content: msg.text }))
-        ],
-        temperature: 1,
-        max_tokens: 500,
-        top_p: 1,
-        frequency_penalty: 0
-      };
-
-      const completion = await anyscale.chat.completions.create(requestOptions);
-      const assistantMessage = completion.choices[0]?.message?.content.replace(/\n/g, '<br/>').replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-      const botMessage = {
-        id: messages.value.length + 1,
-        text: assistantMessage,
-        sender: 'bot'
-      };
-      messages.value.push(botMessage);
-
-      loading.value = false;
-
-      await nextTick();
-      scrollToBottom();
-    }
+    const completion = await anyscale.chat.completions.create(requestOptions);
+    const assistantMessage = completion.choices[0]?.message?.content.replace(/\n/g, '<br/>').replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    const botMessage = {
+      id: Date.now(),
+      text: assistantMessage,
+      sender: 'bot',
+      timestamp: new Date()
+    };
+    messages.value.push(botMessage);
   } catch (error) {
     console.error(error);
     messages.value.push({
-      id: messages.value.length + 1,
+      id: Date.now(),
       text: 'Try again later',
-      sender: 'bot'
+      sender: 'bot',
+      timestamp: new Date()
     });
-
+  } finally {
     loading.value = false;
+    nextTick(scrollToBottom);
+  }
+};
 
-    await nextTick();
-    scrollToBottom();
+const sendMessage = async () => {
+  addUserMessage();
+  if (messages.value.length > 0) {
+    await fetchBotResponse();
   }
 };
 
 const startNewChat = () => {
   messages.value = [];
-  localStorage.removeItem('chatMessages');
+  sessionStorage.removeItem('chatMessages');
+};
+
+const formatTimestamp = (timestamp) => {
+  return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 };
 
 onMounted(() => {
-  const savedMessages = localStorage.getItem('chatMessages');
+  const savedTheme = localStorage.getItem('theme');
+  if (savedTheme) {
+    theme.value = savedTheme;
+  }
+  const savedMessages = sessionStorage.getItem('chatMessages');
   if (savedMessages) {
     messages.value = JSON.parse(savedMessages);
   }
+  // Clear messages on refresh
+  messages.value = [];
+  sessionStorage.removeItem('chatMessages');
 });
 
 watch(messages, (newMessages) => {
-  localStorage.setItem('chatMessages', JSON.stringify(newMessages));
-});
+  sessionStorage.setItem('chatMessages', JSON.stringify(newMessages));
+}, { deep: true });
 </script>
 
 <style scoped>
+.chat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  background-image: url('https://giffiles.alphacoders.com/221/221829.gif');
+  background-size: cover;
+  background-position: center;
+  color: var(--header-text-color);
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+  font-size: 24px;
+}
+
+.chat-header h2 {
+  color: #ffffff;
+}
+
+.header-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.header-buttons .p-button {
+  font-size: 16px; 
+  padding: 8px; 
+}
+
+:root {
+  --bg-color: #f0f0f0;
+  --text-color: #333;
+  --user-bg: #059669;
+  --user-text: #fff;
+  --bot-bg: #fff;
+  --bot-text: #333;
+  --header-text-color: #ffffff;
+  --input-bg: #fff;
+  --input-border: #ddd;
+  --button-bg: #059669;
+  --button-text: #fff;
+  --timestamp-color: #888;
+  --focus-border-color: #059669;
+}
+
 .chat-container {
   display: flex;
   flex-direction: column;
   height: 100vh;
-  background-color: #f0f0f0;
-}
-
-.chat-header {
-  background-image: url('https://giffiles.alphacoders.com/221/221829.gif');
-  background-size: cover;
-  background-position: center;
-  color: #FFFFFF;
-  padding: 16px;
-  text-align: center;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
-  font-size: 24px;
-  position: relative;
-}
-
-.new-chat-icon {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  font-size: 24px;
-  cursor: pointer;
+  background-color: var(--bg-color);
+  color: var(--text-color);
 }
 
 .chat-messages-container {
@@ -185,21 +235,28 @@ watch(messages, (newMessages) => {
   word-break: break-word;
 }
 
+.chat-message .message-timestamp {
+  font-size: 0.8em;
+  color: var(--timestamp-color);
+  margin-top: 4px;
+  align-self: flex-end;
+}
+
 .chat-message.user {
-  background-color: #059669;
-  color: #fff;
+  background-color: var(--user-bg);
+  color: var(--user-text);
   align-self: flex-end;
 }
 
 .chat-message.bot {
-  background-color: #fff;
-  color: #333;
+  background-color: var(--bot-bg);
+  color: var(--bot-text);
   align-self: flex-start;
 }
 
 .chat-input-container {
-  background-color: #fff;
-  border-top: 1px solid #ddd;
+  background-color: var(--input-bg);
+  border-top: 1px solid var(--input-border);
   padding: 16px;
 }
 
@@ -208,23 +265,62 @@ watch(messages, (newMessages) => {
   align-items: center;
 }
 
-.chat-input input {
+.p-inputtext {
   flex-grow: 1;
   margin-right: 12px;
+  background-color: var(--input-bg);
+  color: var(--text-color);
+  border: 1px solid var(--input-border);
 }
 
-.chat-input button {
-  min-width: 80px;
-}
-
-.chat-input input:focus {
-  border-color: #059669;
+.p-inputtext:focus {
+  border-color: var(--focus-border-color);
   outline: none;
 }
 
-.chat-input button:hover {
-  background-color: #047857;
-  color: #fff;
+.p-button {
+  min-width: 80px;
+  background-color: var(--button-bg) !important;
+  color: var(--button-text) !important;
+  border: none;
+  transition: background 0.3s ease;
+}
+
+.p-button:not(:disabled):hover {
+  background: linear-gradient(270deg, 
+    #ff0000, /* Red */
+    #ff7f00, /* Orange */
+    #ffff00, /* Yellow */
+    #00ff00, /* Green */
+    #0000ff, /* Blue */
+    #4b0082, /* Indigo */
+    #8b00ff  /* Violet */
+  );
+  background-size: 400% 400%;
+  animation: rainbowAnimation 5s ease infinite;
+}
+
+@keyframes rainbowAnimation {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+
+.chat-container.dark {
+  --bg-color: #333;
+  --text-color: #fff;
+  --user-bg: #047857;
+  --user-text: #fff;
+  --bot-bg: #444;
+  --bot-text: #fff;
+  --header-text-color: #dddddd;
+  --input-bg: #444;
+  --input-border: #555;
+  --button-bg: #047857;
+  --button-text: #fff;
+  --timestamp-color: #aaa;
+  --focus-border-color: #047857;
 }
 
 @media (max-width: 768px) {
