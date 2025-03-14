@@ -49,8 +49,8 @@ const loading = ref(false);
 const theme = ref('dark');
 
 const anyscale = new OpenAI({
-  baseURL: 'https://openrouter.ai/api/v1',
-  apiKey: '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',
+  baseURL: 'https://models.inference.ai.azure.com',
+  apiKey: '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',
   dangerouslyAllowBrowser: true
 });
 
@@ -84,15 +84,14 @@ const fetchBotResponse = async () => {
   loading.value = true;
   try {
     const requestOptions = {
-      model: 'deepseek/deepseek-r1-zero:free',
       messages: [
         systemMessage,
         ...messages.value.map(msg => ({ role: msg.sender === 'user' ? 'user' : 'assistant', content: msg.text }))
       ],
-      temperature: 1,
-      max_tokens: 500,
-      top_p: 1,
-      frequency_penalty: 0
+    model: "gpt-4o",
+    temperature: 1,
+    max_tokens: 1000,
+    top_p: 1
     };
 
     const completion = await anyscale.chat.completions.create(requestOptions);
