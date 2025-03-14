@@ -50,7 +50,7 @@ const theme = ref('dark');
 
 const anyscale = new OpenAI({
   baseURL: 'https://openrouter.ai/api/v1',
-  apiKey: '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',
+  apiKey: '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',
   dangerouslyAllowBrowser: true
 });
 
@@ -84,7 +84,7 @@ const fetchBotResponse = async () => {
   loading.value = true;
   try {
     const requestOptions = {
-      model: 'deepseek/deepseek-r1:free',
+      model: 'deepseek/deepseek-r1-zero:free',
       messages: [
         systemMessage,
         ...messages.value.map(msg => ({ role: msg.sender === 'user' ? 'user' : 'assistant', content: msg.text }))
